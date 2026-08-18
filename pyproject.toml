@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kbio-tr-peis"
+version = "0.1.0"
+description = "Helpers for running Bio-Logic TR-PEIS procedures from Python"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "ipykernel>=6.29",
+    "ipython>=8.20",
+    "ipywidgets>=8.1",
+    "jupyter>=1.0",
+    "matplotlib>=3.8",
+    "numpy>=1.26",
+    "pandas>=2.2",
+]
+
+[tool.setuptools]
+# The source directory retains its original name, while the installed/imported
+# package is called `kbio`, matching the notebook and intra-package imports.
+packages = ["kbio"]
+package-dir = { kbio = "kbio_tr-peis" }
+
+[tool.uv]
+package = true
