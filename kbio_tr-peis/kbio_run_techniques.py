@@ -105,6 +105,108 @@ def PEIS_params(
     return ecc_parms
 
 
+def GEIS_params(
+    api,
+    vs_init=False,
+    Initial_Current_step=500,
+    step_duration=0,
+    record_dt=1,
+    record_dE=1,
+    Final_frequency=100,
+    Initial_frequency=100,
+    Lin_Log=False,
+    Amplitude=0.005,
+    Frequency_number=1,
+    Average_N_times=1,
+    Correction=False,
+    Wait_for_steady=0.1,
+    I_range=11,
+):
+    """
+    Create ECC parameters for a Galvanoostatic Electrochemical Impedance Spectroscopy (PEIS) technique.
+
+    Parameters
+    ----------
+    api : object
+        API object used by `make_ecc_parm`/`make_ecc_parms` to construct parameters.
+    vs_init : bool, optional
+        Whether the step is relative to the initial voltage (default False). ECC name: 'vs_initial'.
+    Initial_Voltage_step : float, optional
+        Starting voltage step in volts (default 1.44). ECC name: 'Initial_Voltage_step'.
+    step_duration : float, optional
+        Duration of the voltage step in seconds (default 0). ECC name: 'Duration_step'.
+    record_dt : float, optional
+        Time interval for recording in seconds (default 1). ECC name: 'Record_every_dT'.
+    record_dE : float, optional
+        Voltage increment for recording in volts (default 1). ECC name: 'Record_every_dI'.
+    Final_frequency : float, optional
+        Final frequency for the sweep in Hz (default 100). ECC name: 'Final_frequency'.
+    Initial_frequency : float, optional
+        Initial frequency for the sweep in Hz (default 100). ECC name: 'Initial_frequency'.
+    Lin_Log : bool, optional
+        Linear/log sweep flag (default False). ECC name: 'sweep'.
+    Amplitude : float, optional
+        AC amplitude in volts (default 0.005). ECC name: 'Amplitude_Voltage'.
+    Frequency_number : int, optional
+        Number of frequencies (default 1). ECC name: 'Frequency_number'.
+    Average_N_times : int, optional
+        Averaging count (default 1). ECC name: 'Average_N_times'.
+    Correction : bool, optional
+        Apply correction flag (default False). ECC name: 'Correction'.
+    Wait_for_steady : float, optional
+        Seconds to wait for steady state (default 0.1). ECC name: 'Wait_for_steady'.
+    I_range : int, optional
+        Current range index (default 11). ECC name: 'I_Range'.
+
+    Returns
+    -------
+    list
+        ECC parameter list constructed by `make_ecc_parms` and ready to pass to the instrument API.
+
+    Example
+    -------
+    >>> ecc_params = PEIS_params(api, Initial_Voltage_step=1.44, Amplitude=0.005)
+    """
+
+    p_current = make_ecc_parm(
+        api, ECC_parm("Initial_Current_step", float), Initial_Current_step
+    )
+    p_step_dur = make_ecc_parm(api, ECC_parm("Duration_step", float), step_duration)
+    p_vs_init = make_ecc_parm(api, ECC_parm("vs_initial", bool), vs_init)
+    p_record_dt = make_ecc_parm(api, ECC_parm("Record_every_dT", float), record_dt)
+    p_record_dE = make_ecc_parm(api, ECC_parm("Record_every_dI", float), record_dE)
+    p_ff = make_ecc_parm(api, ECC_parm("Final_frequency", float), Final_frequency)
+    p_fi = make_ecc_parm(api, ECC_parm("Initial_frequency", float), Initial_frequency)
+    p_linlog = make_ecc_parm(api, ECC_parm("sweep", bool), Lin_Log)
+    p_ampl = make_ecc_parm(api, ECC_parm("Amplitude_Current", float), Amplitude)
+    p_f_numbers = make_ecc_parm(
+        api, ECC_parm("Frequency_number", int), Frequency_number
+    )
+    p_avg = make_ecc_parm(api, ECC_parm("Average_N_times", int), Average_N_times)
+    p_correction = make_ecc_parm(api, ECC_parm("Correction", bool), Correction)
+    p_steady = make_ecc_parm(api, ECC_parm("Wait_for_steady", float), Wait_for_steady)
+    p_I_range = make_ecc_parm(api, ECC_parm("I_Range", int), I_range)
+
+    ecc_parms = make_ecc_parms(
+        api,
+        p_current,
+        p_step_dur,
+        p_vs_init,
+        p_record_dt,
+        p_record_dE,
+        p_ff,
+        p_fi,
+        p_linlog,
+        p_ampl,
+        p_f_numbers,
+        p_avg,
+        p_correction,
+        p_steady,
+        p_I_range,
+    )
+    return ecc_parms
+
+
 def OCV_params(
     api, Rest_time_T=30, Record_every_dE=0.05, Record_every_dT=0.1, I_range=5, E_range=3
 ):
@@ -228,7 +330,7 @@ def CA_params(
         p_number,
         p_cycles,
         p_I_range,
-        p_E_range
+        p_E_range,
     )
     return ecc_parms
 
@@ -335,7 +437,7 @@ def CV_params(
         p_begin_I,
         p_end_I,
         p_I_range,
-        p_E_range
+        p_E_range,
     )
 
     return ecc_parms
