@@ -276,6 +276,65 @@ def get_exp_data(api, data, board_type, data_out, index=0):
             #         inx = ix + data_info.NbCols
             #         row = data_record[ix:inx]
             #         parsed_row = [f"0x{word:08X}" for word in row]
+
+            elif data_info.TechniqueID == 107:
+                inx = ix + data_info.NbCols
+
+                # t_high, t_low, *row = data_record[ix:inx]
+                row = data_record[ix:inx]
+
+                if data_info.NbCols == 4:
+                    t_high, t_low, *row = row
+                    Ewe = api.ConvertChannelNumericIntoSingle(row[0], board_type)
+                    Iwe = api.ConvertChannelNumericIntoSingle(row[1], board_type)
+                    # compute timestamp in seconds
+                    t_rel = (t_high << 32) + t_low
+                    t = current_values.TimeBase * t_rel
+                    parsed_row = {
+                        "time/s": t,
+                        "startTime/s": data_info.StartTime,
+                        "Ewe/V": Ewe,
+                        "I/mA": Iwe,
+                        "Tech": index,
+                        "Loop": data_info.loop,
+                    }
+                    for var in parsed_row.keys():
+                        data_out["GEIS_CP"][var].append(parsed_row[var])
+                else:
+                    # nb_words = len(row)
+                    freq = api.ConvertChannelNumericIntoSingle(row[0], board_type)
+                    Eamp = api.ConvertChannelNumericIntoSingle(row[1], board_type)
+                    Iamp = api.ConvertChannelNumericIntoSingle(row[2], board_type)
+                    phase = api.ConvertChannelNumericIntoSingle(row[3], board_type)
+                    time = api.ConvertChannelNumericIntoSingle(row[13], board_type)
+                    I = api.ConvertChannelNumericIntoSingle(row[5], board_type)
+                    Ewe = api.ConvertChannelNumericIntoSingle(row[4], board_type)
+                    Ecamp = api.ConvertChannelNumericIntoSingle(row[7], board_type)
+                    Icamp = api.ConvertChannelNumericIntoSingle(row[8], board_type)
+                    cphase = api.ConvertChannelNumericIntoSingle(row[9], board_type)
+                    Ece = api.ConvertChannelNumericIntoSingle(row[10], board_type)
+                    Re = Eamp / Iamp * np.cos(phase)
+                    Im = Eamp / Iamp * np.sin(phase)
+
+                    Rec = Ecamp / Icamp * np.cos(cphase)
+                    Imc = Ecamp / Icamp * np.sin(cphase)
+                    # print(Re,Im)
+                    parsed_row = {
+                        "time/s": time,
+                        "startTime/s": data_info.StartTime,
+                        "Ewe/V": Ewe,
+                        "Ece/V": Ece,
+                        "I/mA": I,
+                        "freq/Hz": freq,
+                        "Re(Z)/Ohm": Re,
+                        "-Im(Z)/Ohm": -Im,
+                        "Re(Zce)/Ohm": Rec,
+                        "-Im(Zce)/Ohm": -Imc,
+                        "Tech": index,
+                        "Loop": data_info.loop,
+                    }
+                    for var in parsed_row.keys():
+                        data_out["GEIS"][var].append(parsed_row[var])
             ix = inx
     return data_out
 
@@ -408,10 +467,10 @@ def plot_results(data_out_all, techniques=["OCV"], index=1):
 
     if "OCV" in techniques or "CP" in techniques or "CV" in techniques:
         plot_voltage = True
-    if "CA" in techniques or "PEIS" in techniques:
+    if "CA" in techniques or "PEIS" in techniques or "GEIS" in techniques:
         plot_current = True
         plot_voltage = True  # CA and PEIS also have voltage vs time
-    if "PEIS" in techniques:
+    if "PEIS" in techniques or "GEIS" in techniques:
         plot_impedance = True
         plot_voltage = True
     if "CV" in techniques:
@@ -525,6 +584,13 @@ def plot_results(data_out_all, techniques=["OCV"], index=1):
                     "-",
                     c=color,
                 )
+            if "GEIS" in techniques:
+                ax.plot(
+                    data_out["GEIS"]["Re(Z)/Ohm"],
+                    data_out["GEIS"]["-Im(Z)/Ohm"],
+                    "-",
+                    c=color,
+                )
         ax.set_title("Impedance")
         ax.set_xlabel("Z' (Ohm)")
         ax.set_ylabel("-Z'' (Ohm)")
@@ -548,7 +614,7 @@ def plot_results(data_out_all, techniques=["OCV"], index=1):
     return fig
 
 
-def create_data_out(techniques, PEIS_time=False):
+def create_data_out(techniques, PEIS_time=False, GEIS_time = False):
     data_out = dict()
     if "PEIS" in techniques:
         data_out["PEIS"] = {
@@ -567,6 +633,30 @@ def create_data_out(techniques, PEIS_time=False):
         }
         if PEIS_time:
             data_out["PEIS_CA"] = {
+                "time/s": [],
+                "Ewe/V": [],
+                "I/mA": [],
+                "Loop": [],
+                "Tech": [],
+                "startTime/s": [],
+            }
+    if "GEIS" in techniques:
+        data_out["GEIS"] = {
+            "time/s": [],
+            "Ewe/V": [],
+            "Ece/V": [],
+            "I/mA": [],
+            "freq/Hz": [],
+            "Re(Z)/Ohm": [],
+            "-Im(Z)/Ohm": [],
+            "Re(Zce)/Ohm": [],
+            "-Im(Zce)/Ohm": [],
+            "Loop": [],
+            "Tech": [],
+            "startTime/s": [],
+        }
+        if GEIS_time:
+            data_out["GEIS_CP"] = {
                 "time/s": [],
                 "Ewe/V": [],
                 "I/mA": [],
