@@ -174,7 +174,7 @@ def GEIS_params(
     p_step_dur = make_ecc_parm(api, ECC_parm("Duration_step", float), step_duration)
     p_vs_init = make_ecc_parm(api, ECC_parm("vs_initial", bool), vs_init)
     p_record_dt = make_ecc_parm(api, ECC_parm("Record_every_dT", float), record_dt)
-    p_record_dE = make_ecc_parm(api, ECC_parm("Record_every_dI", float), record_dE)
+    p_record_dE = make_ecc_parm(api, ECC_parm("Record_every_dE", float), record_dE)
     p_ff = make_ecc_parm(api, ECC_parm("Final_frequency", float), Final_frequency)
     p_fi = make_ecc_parm(api, ECC_parm("Initial_frequency", float), Initial_frequency)
     p_linlog = make_ecc_parm(api, ECC_parm("sweep", bool), Lin_Log)
