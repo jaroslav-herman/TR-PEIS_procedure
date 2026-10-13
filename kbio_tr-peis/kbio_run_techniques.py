@@ -121,6 +121,8 @@ def GEIS_params(
     Correction=False,
     Wait_for_steady=0.1,
     I_range=11,
+    E_range=11,
+    Bandwidth=4,
 ):
     """
     Create ECC parameters for a Galvanoostatic Electrochemical Impedance Spectroscopy (PEIS) technique.
@@ -186,6 +188,8 @@ def GEIS_params(
     p_correction = make_ecc_parm(api, ECC_parm("Correction", bool), Correction)
     p_steady = make_ecc_parm(api, ECC_parm("Wait_for_steady", float), Wait_for_steady)
     p_I_range = make_ecc_parm(api, ECC_parm("I_Range", int), I_range)
+    p_E_range = make_ecc_parm(api, ECC_parm("E_Range", int), E_range)
+    p_bandwidth = make_ecc_parm(api, ECC_parm("Bandwidth", int), Bandwidth)
 
     ecc_parms = make_ecc_parms(
         api,
@@ -203,6 +207,8 @@ def GEIS_params(
         p_correction,
         p_steady,
         p_I_range,
+        p_E_range,
+        p_bandwidth
     )
     return ecc_parms
 

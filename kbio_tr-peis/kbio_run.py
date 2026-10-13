@@ -539,8 +539,16 @@ def plot_results(data_out_all, techniques=["OCV"], index=1):
                     data_out["PEIS"]["Ewe/V"],
                     "-",
                     c=color,
-                    label="OCV",
+                    label="PEIS",
                 )
+            if "GEIS" in techniques and "Ewe/V" in data_out["GEIS"]:
+                            ax.plot(
+                                data_out["GEIS"]["time/s"],
+                                data_out["GEIS"]["Ewe/V"],
+                                "-",
+                                c=color,
+                                label="GEIS",
+                            )
             # CV voltage
             if "CV" in techniques and "Ewe/V" in data_out["CV"]:
                 ax.plot(
