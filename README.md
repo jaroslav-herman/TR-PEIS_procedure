@@ -167,5 +167,8 @@ by that licence.
 
 ## Funding
 
-Ministry of Education, Youth and Sports of the Czech Republic — The Energy
-Conversion and Storage (CZ.02.01.01/00/22_008/0004617).
+This publication was supported by the project “The Energy Conversion and
+Storage,” funded as project No. CZ.02.01.01/00/22_008/0004617 by the Programme
+Johannes Amos Comenius, call Excellent Research. JH acknowledges financial
+support from the Grant Agency of Charles University in Prague (GAUK No. 333225)
+and CERIC AEMWE project.
