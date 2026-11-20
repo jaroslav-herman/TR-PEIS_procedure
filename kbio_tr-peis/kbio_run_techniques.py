@@ -560,3 +560,161 @@ def LOOP_params(api, loop_N_times=0, protocol_number=0):
     p_technique = make_ecc_parm(api, LOOP_parms["protocol_number"], protocol_number)
     ecc_parms = make_ecc_parms(api, p_number, p_technique)
     return ecc_parms
+
+
+import numpy as np
+import random
+
+
+def create_frequency_list(
+    f_start,
+    f_end,
+    points_per_decade,
+    repeat_percentage=0.0,
+    checkpoint_freq=None,
+    checkpoint_interval=None,
+    random_seed=None,
+):
+    """
+    Create an optimized frequency list for TR-PEIS experiments with randomization,
+    repeated frequencies for drift detection, and checkpoint frequencies at regular
+    intervals.
+
+    The algorithm:
+    1. Generates base frequencies in log space using the specified points per decade
+    2. Shuffles the base list randomly
+    3. Selects frequencies to repeat, chosen to be evenly spaced across the entire
+       frequency range (in log space) for optimal coverage
+    4. Inserts each repeat at a position far from its original position to maximize
+       time separation between measurements of the same frequency
+    5. Optionally inserts a checkpoint frequency at regular intervals throughout
+       the sequence
+
+    Parameters
+    ----------
+    f_start : float
+        Start frequency in Hz (highest frequency).
+    f_end : float
+        End frequency in Hz (lowest frequency).
+    points_per_decade : int
+        Number of frequency points per decade.
+    repeat_percentage : float, optional
+        Percentage of base frequencies to repeat (0-100). These repeats are used
+        to detect slow drift during the experiment. Default is 0.0 (no repeats).
+    checkpoint_freq : float or None, optional
+        Frequency in Hz to use as a checkpoint, inserted at regular intervals.
+        If None, no checkpoints are added. Default is None.
+    checkpoint_interval : int or None, optional
+        Insert the checkpoint frequency every N measurements. If None, no
+        checkpoints are added. Default is None.
+    random_seed : int or None, optional
+        Random seed for reproducibility. If None, the system random state is used.
+        Default is None.
+
+    Returns
+    -------
+    frequency_list : numpy.ndarray
+        Array of frequencies in the order they should be measured.
+    info : dict
+        Dictionary containing metadata about the generated frequency list:
+        - 'base_frequencies': Original unshuffled frequency array
+        - 'shuffled_frequencies': Base frequencies after shuffling
+        - 'frequencies_to_repeat': Array of frequencies selected for repetition
+        - 'repeat_percentage': The repeat percentage used
+        - 'checkpoint_frequency': The checkpoint frequency (or None)
+        - 'checkpoint_interval': The checkpoint interval (or None)
+        - 'num_base': Number of base frequencies
+        - 'num_repeats': Number of repeated frequencies
+        - 'num_checkpoints': Number of checkpoint insertions
+        - 'total_measurements': Total number of measurements in the list
+
+    Examples
+    --------
+    Basic usage with no repeats or checkpoints:
+    >>> f_list, info = create_frequency_list(20000, 2, 6)
+
+    With 20% repeats and a checkpoint every 5 measurements:
+    >>> f_list, info = create_frequency_list(
+    ...     20000, 2, 6,
+    ...     repeat_percentage=20,
+    ...     checkpoint_freq=1000,
+    ...     checkpoint_interval=5
+    ... )
+
+    Reproducible generation with a fixed seed:
+    >>> f_list, info = create_frequency_list(20000, 2, 6, random_seed=42)
+
+    Notes
+    -----
+    The repeated frequencies are selected to be evenly distributed across the
+    frequency range (in log space) to ensure coverage across all decades. Each
+    repeat is inserted at a position that is maximally distant from its original
+    position in the shuffled list, typically near the opposite end of the list.
+
+    Checkpoint frequencies are inserted at regular intervals starting from
+    position `checkpoint_interval` (not at the beginning), which allows the
+    first few measurements to establish a baseline before checkpoints begin.
+    """
+    # Set random seed if provided
+    if random_seed is not None:
+        random.seed(random_seed)
+        np.random.seed(random_seed)
+
+    # 1. Generate base frequency list in log space
+    num_points = int(np.ceil(points_per_decade * abs(np.log10(f_start / f_end))))
+    base_freqs = np.logspace(np.log10(f_start), np.log10(f_end), num_points)
+
+    # 2. Shuffle the base list randomly
+    shuffled_freqs = base_freqs.copy()
+    np.random.shuffle(shuffled_freqs)
+
+    # 3. Select frequencies to repeat (evenly spaced in log space for full coverage)
+    num_repeats = max(0, int(round(num_points * repeat_percentage / 100.0)))
+    if num_repeats > 0:
+        # Use linspace to get evenly spaced indices in the SORTED array
+        # This ensures the repeated frequencies cover the entire range
+        repeat_indices = np.linspace(0, num_points - 1, num_repeats, dtype=int)
+        freqs_to_repeat = base_freqs[repeat_indices]
+    else:
+        freqs_to_repeat = np.array([])
+
+    # 4. Build final list with optimal repeat placement
+    # Strategy: append all repeats at the END of the list
+    # This is the simplest and most effective approach because:
+    # - Each repeat is measured after ALL base frequencies, maximizing time separation
+    # - The order of repeats doesn't matter much as long as they're all at the end
+    # - It's easy to understand and verify
+    final_list = list(shuffled_freqs)
+
+    # If we have repeats, simply append them at the end
+    if len(freqs_to_repeat) > 0:
+        final_list.extend(list(freqs_to_repeat))
+
+    # 5. Add checkpoint frequencies at regular intervals
+    if checkpoint_freq is not None and checkpoint_interval is not None:
+        # Insert checkpoint every checkpoint_interval frequencies
+        # Start from position checkpoint_interval (not at the very beginning)
+        i = checkpoint_interval
+        while i < len(final_list):
+            final_list.insert(i, checkpoint_freq)
+            i += checkpoint_interval + 1  # +1 because we just inserted one
+
+    # 6. Create info dictionary
+    info = {
+        "base_frequencies": base_freqs,
+        "shuffled_frequencies": shuffled_freqs,
+        "frequencies_to_repeat": freqs_to_repeat,
+        "repeat_percentage": repeat_percentage,
+        "checkpoint_frequency": checkpoint_freq,
+        "checkpoint_interval": checkpoint_interval,
+        "num_base": num_points,
+        "num_repeats": len(freqs_to_repeat),
+        "num_checkpoints": (
+            sum(1 for f in final_list if f == checkpoint_freq)
+            if checkpoint_freq is not None
+            else 0
+        ),
+        "total_measurements": len(final_list),
+    }
+
+    return np.array(final_list), info
