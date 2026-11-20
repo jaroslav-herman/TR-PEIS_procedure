@@ -2,6 +2,9 @@ from kbio.kbio_tech import ECC_parm
 from kbio.kbio_tech import make_ecc_parm
 from kbio.kbio_tech import make_ecc_parms
 
+import numpy as np
+import random
+
 
 def PEIS_params(
     api,
@@ -560,10 +563,6 @@ def LOOP_params(api, loop_N_times=0, protocol_number=0):
     p_technique = make_ecc_parm(api, LOOP_parms["protocol_number"], protocol_number)
     ecc_parms = make_ecc_parms(api, p_number, p_technique)
     return ecc_parms
-
-
-import numpy as np
-import random
 
 
 def create_frequency_list(
