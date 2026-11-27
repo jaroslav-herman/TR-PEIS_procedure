@@ -717,3 +717,117 @@ def create_frequency_list(
     }
 
     return np.array(final_list), info
+
+
+def create_frequency_list_low_freq_repeats(
+    f_start,
+    f_end,
+    points_per_decade,
+    repeat_percentage=0.0,
+    random_seed=None,
+):
+    """
+    Create a frequency list for TR-PEIS experiments in which repeated frequencies
+    are biased toward the low-frequency end of the sweep.
+
+    The algorithm:
+    1. Generates base frequencies in log space using the specified points per
+       decade (identical to `create_frequency_list`)
+    2. Selects the frequencies to repeat with a probability that increases
+       linearly in log space from the highest to the lowest frequency, so lower
+       frequencies are repeated with higher probability than higher ones
+    3. Shuffles the base frequencies and the selected repeats independently
+    4. Appends the shuffled repeats at the end of the shuffled base list
+
+    Parameters
+    ----------
+    f_start : float
+        Start frequency in Hz (highest frequency).
+    f_end : float
+        End frequency in Hz (lowest frequency).
+    points_per_decade : int
+        Number of frequency points per decade.
+    repeat_percentage : float, optional
+        Percentage of base frequencies to repeat (0-100), as in
+        `create_frequency_list`. Default is 0.0 (no repeats).
+    random_seed : int or None, optional
+        Random seed for reproducibility. If None, the system random state is used.
+        Default is None.
+
+    Returns
+    -------
+    frequency_list : numpy.ndarray
+        Array of frequencies in the order they should be measured. The shuffled
+        base frequencies come first, followed by the shuffled repeats at the end.
+    info : dict
+        Dictionary containing metadata about the generated frequency list:
+        - 'base_frequencies': Original unshuffled frequency array
+        - 'shuffled_frequencies': Base frequencies after shuffling
+        - 'frequencies_to_repeat': Frequencies selected for repetition (biased
+          toward low frequencies)
+        - 'shuffled_repeats': Repeats in the order they appear at the end of the list
+        - 'repeat_percentage': The repeat percentage used
+        - 'num_base': Number of base frequencies
+        - 'num_repeats': Number of repeated frequencies
+        - 'total_measurements': Total number of measurements in the list
+
+    Examples
+    --------
+    Basic usage with no repeats:
+    >>> f_list, info = create_frequency_list_low_freq_repeats(20000, 2, 6)
+
+    With 20% repeats biased toward low frequencies, reproducible with a seed:
+    >>> f_list, info = create_frequency_list_low_freq_repeats(
+    ...     20000, 2, 6, repeat_percentage=20, random_seed=42
+    ... )
+
+    Notes
+    -----
+    Unlike `create_frequency_list`, which picks repeats evenly spaced in log
+    space, this function draws the repeats without replacement using weights
+    that grow linearly from the highest frequency (weight 1) to the lowest
+    frequency (weight `num_points`). The repeats are still appended at the end
+    of the list so each repeated frequency is measured only after all base
+    frequencies, maximizing the time separation between the original and the
+    repeated measurement.
+    """
+    if random_seed is not None:
+        random.seed(random_seed)
+        np.random.seed(random_seed)
+
+    num_points = int(np.ceil(points_per_decade * abs(np.log10(f_start / f_end))))
+    base_freqs = np.logspace(np.log10(f_start), np.log10(f_end), num_points)
+
+    num_repeats = max(0, int(round(num_points * repeat_percentage / 100.0)))
+    if num_repeats > 0:
+        weights = np.linspace(1.0, num_points, num_points)
+        weights = weights / weights.sum()
+        repeat_indices = np.random.choice(
+            num_points, size=num_repeats, replace=False, p=weights
+        )
+        freqs_to_repeat = base_freqs[repeat_indices]
+    else:
+        freqs_to_repeat = np.array([])
+
+    shuffled_freqs = base_freqs.copy()
+    np.random.shuffle(shuffled_freqs)
+
+    shuffled_repeats = freqs_to_repeat.copy()
+    np.random.shuffle(shuffled_repeats)
+
+    final_list = list(shuffled_freqs)
+    if len(shuffled_repeats) > 0:
+        final_list.extend(list(shuffled_repeats))
+
+    info = {
+        "base_frequencies": base_freqs,
+        "shuffled_frequencies": shuffled_freqs,
+        "frequencies_to_repeat": freqs_to_repeat,
+        "shuffled_repeats": shuffled_repeats,
+        "repeat_percentage": repeat_percentage,
+        "num_base": num_points,
+        "num_repeats": len(freqs_to_repeat),
+        "total_measurements": len(final_list),
+    }
+
+    return np.array(final_list), info
